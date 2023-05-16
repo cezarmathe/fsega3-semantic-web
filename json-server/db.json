@@ -1,0 +1,15 @@
+{
+  "blogs": [
+    {
+      "id": 1,
+      "name": "Drew DeVault's blog",
+      "url": "https://drewdevault.com/"
+    },
+    {
+      "id": 1,
+      "name": "Blog",
+      "url": "https://emersion.fr/blog/"
+    }
+  ],
+  "posts": []
+}
