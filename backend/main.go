@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xpath"
+	"github.com/rs/cors"
 )
 
 const (
@@ -16,15 +18,18 @@ const (
 )
 
 func main() {
-	server := &http.ServeMux{}
+	mux := &http.ServeMux{}
 
-	server.HandleFunc("/api/scrape", scrapeServeHTTP)
-	server.HandleFunc("/api/persist-first", persistFirstServeHTTP)
-	server.HandleFunc("/api/persist-second", persistSecondServeHTTP)
-	server.HandleFunc("/api/delete", deleteServeHTTP)
+	mux.HandleFunc("/api/scrape", scrapeServeHTTP)
+	mux.HandleFunc("/api/persist-first", persistFirstServeHTTP)
+	mux.HandleFunc("/api/persist-second", persistSecondServeHTTP)
+	mux.HandleFunc("/api/delete", deleteServeHTTP)
+
+	handler := cors.Default().Handler(mux)
 
 	log.Printf("Server listening on %s:%s", HOST, PORT)
-	err := http.ListenAndServe(HOST+":"+PORT, server)
+
+	err := http.ListenAndServe(HOST+":"+PORT, handler)
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed to start: %v", err)
 	}
@@ -32,14 +37,21 @@ func main() {
 	log.Printf("bye bye")
 }
 
-type scrapedBlogPost struct {
-	URL   string `json:"url"`
+type blogPost struct {
 	Title string `json:"title"`
+	URL   string `json:"url"`
 }
 
 var scrapeBlogPostsXPath = xpath.MustCompile("//section[@class='article-list']/div[@class='article']/a[@href]")
 
 func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	log.Printf("Scraping website: %s", SCRAPE_WEBSITE_URL)
 
 	resp, err := http.Get(SCRAPE_WEBSITE_URL)
@@ -71,15 +83,15 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scrapedBlogPosts := make([]scrapedBlogPost, 0, 10)
-	for i := 0; i < cap(scrapedBlogPosts); i++ {
-		scrapedBlogPosts = append(scrapedBlogPosts, scrapedBlogPost{
+	blogPosts := make([]blogPost, 0, 10)
+	for i := 0; i < cap(blogPosts); i++ {
+		blogPosts = append(blogPosts, blogPost{
 			URL:   htmlquery.SelectAttr(nodes[i], "href"),
 			Title: htmlquery.InnerText(nodes[i]),
 		})
 	}
 
-	respBody, err := json.Marshal(scrapedBlogPosts)
+	respBody, err := json.Marshal(blogPosts)
 	if err != nil {
 		log.Printf("Failed to marshal JSON: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -92,7 +104,40 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func persistFirstServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Failed to read request body: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	var reqBody []blogPost
+	err = json.Unmarshal(b, &reqBody)
+	if err != nil {
+		log.Printf("Failed to unmarshal JSON: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// todo: do the saving
+
+	respBody, err := json.Marshal(reqBody)
+	if err != nil {
+		log.Printf("Failed to marshal JSON: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	w.Write(respBody)
 }
 
 func persistSecondServeHTTP(w http.ResponseWriter, r *http.Request) {
