@@ -8,13 +8,14 @@ import (
 
 	"github.com/antchfx/htmlquery"
 	"github.com/antchfx/xpath"
+	"github.com/cezarmathe/semweb/backend/repository"
+	"github.com/cezarmathe/semweb/backend/types"
 	"github.com/rs/cors"
 )
 
 const (
-	HOST               = "0.0.0.0"
-	PORT               = "8000"
-	SCRAPE_WEBSITE_URL = "https://drewdevault.com"
+	HOST = "0.0.0.0"
+	PORT = "8000"
 )
 
 func main() {
@@ -37,12 +38,14 @@ func main() {
 	log.Printf("bye bye")
 }
 
-type blogPost struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
-}
+const SCRAPE_WEBSITE_URL = "https://drewdevault.com"
 
 var scrapeBlogPostsXPath = xpath.MustCompile("//section[@class='article-list']/div[@class='article']/a[@href]")
+
+var (
+	firstRepository  repository.Interface = repository.NewJSONServer("http://localhost:3000", http.DefaultClient)
+	secondRepository repository.Interface = repository.NewJSONServer("http://localhost:3001", http.DefaultClient)
+)
 
 func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -83,9 +86,9 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blogPosts := make([]blogPost, 0, 10)
+	blogPosts := make([]types.BlogPost, 0, 10)
 	for i := 0; i < cap(blogPosts); i++ {
-		blogPosts = append(blogPosts, blogPost{
+		blogPosts = append(blogPosts, types.BlogPost{
 			URL:   htmlquery.SelectAttr(nodes[i], "href"),
 			Title: htmlquery.InnerText(nodes[i]),
 		})
@@ -118,7 +121,7 @@ func persistFirstServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var reqBody []blogPost
+	var reqBody []types.BlogPost
 	err = json.Unmarshal(b, &reqBody)
 	if err != nil {
 		log.Printf("Failed to unmarshal JSON: %v", err)
@@ -126,9 +129,23 @@ func persistFirstServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// todo: do the saving
+	for _, v := range reqBody {
+		_, err = firstRepository.SaveOne(r.Context(), v)
+		if err != nil {
+			log.Printf("Failed to save blog post: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
 
-	respBody, err := json.Marshal(reqBody)
+	resp, err := firstRepository.FindAll(r.Context())
+	if err != nil {
+		log.Printf("Failed to find all blog posts: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	respBody, err := json.Marshal(resp)
 	if err != nil {
 		log.Printf("Failed to marshal JSON: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
