@@ -43,8 +43,14 @@ const SCRAPE_WEBSITE_URL = "https://drewdevault.com"
 var scrapeBlogPostsXPath = xpath.MustCompile("//section[@class='article-list']/div[@class='article']/a[@href]")
 
 var (
-	firstRepository  repository.Interface = repository.NewJSONServer("http://localhost:3000", http.DefaultClient)
-	secondRepository repository.Interface = repository.NewJSONServer("http://localhost:3001", http.DefaultClient)
+	firstRepository repository.Interface = repository.NewJSONServer(
+		"http://localhost:3000",
+		http.DefaultClient,
+	)
+	secondRepository repository.Interface = repository.NewRDF4J(
+		"http://localhost:8080/rdf4j-server/repositories/grafexamen",
+		http.DefaultClient,
+	)
 )
 
 func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
