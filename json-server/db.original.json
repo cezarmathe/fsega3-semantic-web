@@ -1,0 +1,21 @@
+{
+  "blogs": [
+    {
+      "id": 1,
+      "name": "Drew DeVault's blog",
+      "url": "https://drewdevault.com/"
+    },
+    {
+      "id": 2,
+      "name": "Blog",
+      "url": "https://emersion.fr/blog/"
+    }
+  ],
+  "posts": [
+    {
+      "id": 0,
+      "title": "What is the Most Minimal UK Address Possible?",
+      "url": "https://microblog.vladh.net/posts/most-minimal-uk-address/"
+    }
+  ]
+}
