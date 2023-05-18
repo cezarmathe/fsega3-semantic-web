@@ -6,7 +6,7 @@ DOCKER ?= podman
 DOCKER_COMPOSE ?= $(DOCKER)-compose
 
 run-backend:
-	$(GO) run backend/main.go
+	go run backend/main.go
 .PHONY: run-backend
 
 run-frontend:

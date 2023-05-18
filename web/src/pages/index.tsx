@@ -8,6 +8,8 @@ import {
 } from '@nextui-org/react';
 import { useState } from 'react';
 
+const API_BASE_URL = 'http://localhost:8000';
+
 interface BlogPost {
   author: string;
   date: string;
@@ -62,7 +64,7 @@ export default function Home() {
   const [scrapedBlogPosts, setScrapedBlogPosts] = useState([]);
 
   const scrapeButtonOnPress = async (_: PressEvent) => {
-    const resp = await fetch('http://localhost:8000/api/scrape');
+    const resp = await fetch(API_BASE_URL + '/api/scrape');
     console.log("scrape response", resp);
     const data = await resp.json();
     setScrapedBlogPosts(data);
@@ -83,7 +85,7 @@ export default function Home() {
       url: newBlogPostURL.value,
     });
 
-    const resp = await fetch('http://localhost:8000/api/persist-first', {
+    const resp = await fetch(API_BASE_URL + '/api/persist-first', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +101,7 @@ export default function Home() {
   const addAndSaveButtonOnPress2 = async (_: PressEvent) => {
     const payload: Array<BlogPost> = Object.assign([], savedBlogPosts);
 
-    const resp = await fetch('http://localhost:8000/api/persist-second', {
+    const resp = await fetch(API_BASE_URL + '/api/persist-second', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -116,7 +118,7 @@ export default function Home() {
   const deleteBlogPostsByAuthorInput = useInput("");
   const [remainingBlogPosts, setRemainingBlogPosts] = useState([]);
   const deleteBlogPostsByAuthorButtonOnPress = async (_: PressEvent) => {
-    const resp = await fetch('http://localhost:8000/api/delete?' + new URLSearchParams({
+    const resp = await fetch(API_BASE_URL + '/api/delete?' + new URLSearchParams({
       author: deleteBlogPostsByAuthorInput.value,
     }).toString(), {
       method: 'DELETE',
