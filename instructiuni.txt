@@ -1,0 +1,60 @@
+# Proiect Web Semantic - Mathe Armand Cezar si Tritean Sergiu Daniel, Mai 2023
+
+## Instructiuni backend
+
+### Instalare
+
+Este necesar sa aveti instalat Go 1.18 sau mai nou.
+
+- Windows: descarcati si instalati Go de la
+  https://go.dev/dl/go1.20.4.windows-amd64.msi. Go trebuie sa fie accesabil in
+  PATH.
+- MacOS: `brew install go` sau descarcati si instalati Go de la
+    https://go.dev/dl/go1.20.4.darwin-arm64.pkg - pentru Apple Sillicon, sau
+    https://go.dev/dl/go1.20.4.darwin-amd64.pkg - pentru Intel.
+  Go trebuie sa fie accesabil in PATH.
+- Linux: instalati Go din pachetele distributiei voastre. Pachetul se poate
+  numi _go_, _golang_, sau alte astfel de variatii. Daca distributia voastra
+  nu suporta instalarea unei versiuni atat de noi de Go, puteti descarca si
+  instala Go de la https://go.dev/dl/go1.20.4.linux-amd64.tar.gz.
+
+Pentru instructiuni mai detaliate vizitati https://go.dev/doc/install.
+
+### Rulare
+
+Din directorul de baza al proiectului se ruleaza:
+- go run backend/main.go
+
+## Instructiuni frontend
+
+### Instalare
+
+- Se instaleaza Yarn prin intermediul NPM:
+    npm install --global yarn
+- Din directorul web al proiectului se ruleaza:
+    yarn install
+
+### Rulare
+
+Din directorul web al proiectului se ruleaza:
+- yarn build
+- yarn start
+
+## Asteptari backend
+
+- json-server e disponibil la http://localhost:4000 si are setul de date indicat
+  in json-server/db.original.json
+  Aceasta setare poate fi modificata in backend/main.go, linia 32.
+- RDF4J e disponibil la http://localhost:8080/rdf4j-server si contine un
+  repository numit grafexamen care e accesibil la adresa
+  http://localhost:8080/rdf4j-server/repositories/grafexamen.
+  Aceasta setare poate fi modificata in backend/main.go, linia 36.
+
+## Asteptari frontend
+
+- serverul backend e disponibil la http://localhost:8000.
+  Aceasta setare poate fi modificata in:
+    - backend/main.go, linia 18 - prin schimbarea portului pe care ruleaza
+      serverul
+    - web/src/pages/index.tsx, linia 11 - prin schimbarea portului unde se
+      asteapta serverul

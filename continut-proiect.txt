@@ -1,0 +1,20 @@
+# Proiect Web Semantic - Mathe Armand Cezar si Tritean Sergiu Daniel, Mai 2023
+
+Toate componentele proiectului sunt implementate.
+
+Tipul de date principal este BlogPost, care are cu 2 campuri mai multe decat
+in cerinta (autor, titlu, data publicarii si URL).
+
+Stergerea se face dupa autor si se sterg toate intrarile cu acel autor, nu se
+sterge doar o singura intrare.
+
+Bonusurile implementate sunt:
+
+- bonus 0.5p dacă pentru cererile HTTP se folosesc alte librării/metode decât
+  cele din seminarii:
+  - componenta backend este implementata in Go, limbaj ce nu a fost studiat
+    la facultate, si server-ul web si cererile web se realizeaza doar cu
+    pachetele standard din Go.
+  - pentru interactiunea cu rdf4j-server am implementat un repository ce se
+    poate observa in backend/repository/rdf4j.go. aceasta implementare nu
+    foloseste librarii externe, ci doar pachetele standard din Go.
