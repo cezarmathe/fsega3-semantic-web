@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/cezarmathe/semweb/backend/types"
 )
@@ -22,37 +24,70 @@ func NewJSONServer(base string, httpClient HTTPClient) *JSONServer {
 	}
 }
 
-func (r *JSONServer) DeleteOneByURL(ctx context.Context, url string) (types.BlogPost, error) {
-	endpoint := r.base + "/posts?url=" + url
+func (r *JSONServer) findAllByAuthor(ctx context.Context, author string) ([]types.BlogPost, error) {
+	endpoint := r.base + "/posts?author=" + url.QueryEscape(author)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return types.BlogPost{}, err
+		return nil, err
 	}
 
 	resp, err := r.client.Do(req)
 	if err != nil {
-		return types.BlogPost{}, err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return types.BlogPost{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return types.BlogPost{}, errors.New("unexpected status code")
+		return nil, errors.New("unexpected status code")
 	}
 
-	var respBody types.BlogPost
+	var respBody []types.BlogPost
 
 	err = json.NewDecoder(resp.Body).Decode(&respBody)
 	if err != nil {
-		return types.BlogPost{}, err
+		return nil, err
 	}
 
 	return respBody, nil
+}
+
+func (r *JSONServer) DeleteByAuthor(ctx context.Context, author string) ([]types.BlogPost, error) {
+	blogPostsToDelete, err := r.findAllByAuthor(ctx, author)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range blogPostsToDelete {
+		endpoint := r.base + "/posts/" + url.PathEscape(strconv.FormatInt(*v.ID, 10))
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := r.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, ErrNotFound
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.New("unexpected status code")
+		}
+	}
+
+	return blogPostsToDelete, nil
 }
 
 func (r *JSONServer) FindAll(ctx context.Context) ([]types.BlogPost, error) {

@@ -32,7 +32,7 @@ func NewRDF4J(base string, httpClient HTTPClient) *RDF4J {
 	}
 }
 
-func (r *RDF4J) DeleteOneByURL(ctx context.Context, url string) (types.BlogPost, error) {
+func (r *RDF4J) DeleteByAuthor(context.Context, string) ([]types.BlogPost, error) {
 	panic("not implemented")
 }
 

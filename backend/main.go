@@ -18,15 +18,35 @@ const (
 	PORT = "8000"
 )
 
+const (
+	SCRAPE_WEBSITE_AUTHOR = "Drew DeVault"
+	SCRAPE_WEBSITE_URL    = "https://drewdevault.com"
+)
+
+var (
+	xpathArticleContainer    = xpath.MustCompile("//section[@class='article-list']/div[@class='article']")
+	xpathArticleDate         = xpath.MustCompile("//span[@class='date']")
+	xparthArticleTitleAndURL = xpath.MustCompile("//a[@href]")
+
+	firstRepository repository.Interface = repository.NewJSONServer(
+		"http://localhost:4000",
+		http.DefaultClient,
+	)
+	secondRepository repository.Interface = repository.NewRDF4J(
+		"http://localhost:8080/rdf4j-server/repositories/grafexamen",
+		http.DefaultClient,
+	)
+)
+
 func main() {
 	mux := &http.ServeMux{}
 
 	mux.HandleFunc("/api/scrape", scrapeServeHTTP)
-	mux.HandleFunc("/api/persist-first", persistFirstServeHTTP)
-	mux.HandleFunc("/api/persist-second", persistSecondServeHTTP)
-	mux.HandleFunc("/api/delete", deleteServeHTTP)
+	mux.HandleFunc("/api/persist-first", persistWithRepository(firstRepository))
+	mux.HandleFunc("/api/persist-second", persistWithRepository(secondRepository))
+	mux.HandleFunc("/api/delete", deleteWithRepository(firstRepository))
 
-	handler := cors.Default().Handler(mux)
+	handler := cors.AllowAll().Handler(mux)
 
 	log.Printf("Server listening on %s:%s", HOST, PORT)
 
@@ -38,24 +58,7 @@ func main() {
 	log.Printf("bye bye")
 }
 
-const SCRAPE_WEBSITE_URL = "https://drewdevault.com"
-
-var scrapeBlogPostsXPath = xpath.MustCompile("//section[@class='article-list']/div[@class='article']/a[@href]")
-
-var (
-	firstRepository repository.Interface = repository.NewJSONServer(
-		"http://localhost:3000",
-		http.DefaultClient,
-	)
-	secondRepository repository.Interface = repository.NewRDF4J(
-		"http://localhost:8080/rdf4j-server/repositories/grafexamen",
-		http.DefaultClient,
-	)
-)
-
 func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -85,7 +88,7 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nodes := htmlquery.QuerySelectorAll(doc, scrapeBlogPostsXPath)
+	nodes := htmlquery.QuerySelectorAll(doc, xpathArticleContainer)
 	if err != nil {
 		log.Printf("Failed to query HTML: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -94,9 +97,31 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	blogPosts := make([]types.BlogPost, 0, 10)
 	for i := 0; i < cap(blogPosts); i++ {
+		node := nodes[i]
+
+		dateNode := htmlquery.QuerySelector(node, xpathArticleDate)
+		if dateNode == nil {
+			log.Printf("Failed to query HTML: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		titleAndURLNode := htmlquery.QuerySelector(node, xparthArticleTitleAndURL)
+		if titleAndURLNode == nil {
+			log.Printf("Failed to query HTML: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		title := htmlquery.InnerText(titleAndURLNode)
+		urlString := htmlquery.SelectAttr(titleAndURLNode, "href")
+		date := htmlquery.InnerText(dateNode)
+
 		blogPosts = append(blogPosts, types.BlogPost{
-			URL:   htmlquery.SelectAttr(nodes[i], "href"),
-			Title: htmlquery.InnerText(nodes[i]),
+			Author: SCRAPE_WEBSITE_AUTHOR,
+			Title:  title,
+			URL:    urlString,
+			Date:   date,
 		})
 	}
 
@@ -112,61 +137,94 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(respBody)
 }
 
-func persistFirstServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
+func persistWithRepository(repository repository.Interface) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		log.Printf("Failed to read request body: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	var reqBody []types.BlogPost
-	err = json.Unmarshal(b, &reqBody)
-	if err != nil {
-		log.Printf("Failed to unmarshal JSON: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	for _, v := range reqBody {
-		_, err = firstRepository.SaveOne(r.Context(), v)
+		b, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("Failed to save blog post: %v", err)
+			log.Printf("Failed to read request body: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	}
 
-	resp, err := firstRepository.FindAll(r.Context())
-	if err != nil {
-		log.Printf("Failed to find all blog posts: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		var reqBody []types.BlogPost
+		err = json.Unmarshal(b, &reqBody)
+		if err != nil {
+			log.Printf("Failed to unmarshal JSON: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	respBody, err := json.Marshal(resp)
-	if err != nil {
-		log.Printf("Failed to marshal JSON: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		for _, v := range reqBody {
+			_, err = repository.SaveOne(r.Context(), v)
+			if err != nil {
+				log.Printf("Failed to save blog post: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(respBody)
+		resp, err := repository.FindAll(r.Context())
+		if err != nil {
+			log.Printf("Failed to find all blog posts: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respBody, err := json.Marshal(resp)
+		if err != nil {
+			log.Printf("Failed to marshal JSON: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(respBody)
+	}
 }
 
-func persistSecondServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
+func deleteWithRepository(repository repository.Interface) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 
-func deleteServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
+		author := r.URL.Query().Get("author")
+		if author == "" {
+			log.Printf("Missing \"author\" query parameter")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		_, err := repository.DeleteByAuthor(r.Context(), author)
+		if err != nil {
+			log.Printf("Failed to delete blog post: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		resp, err := repository.FindAll(r.Context())
+		if err != nil {
+			log.Printf("Failed to find all blog posts: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respBody, err := json.Marshal(resp)
+		if err != nil {
+			log.Printf("Failed to marshal JSON: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(respBody)
+	}
 }

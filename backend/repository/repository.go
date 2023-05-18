@@ -22,7 +22,7 @@ type HTTPClient interface {
 }
 
 type Interface interface {
-	DeleteOneByURL(context.Context, string) (types.BlogPost, error)
+	DeleteByAuthor(context.Context, string) ([]types.BlogPost, error)
 	FindAll(context.Context) ([]types.BlogPost, error)
 	SaveOne(context.Context, types.BlogPost) (types.BlogPost, error)
 }
