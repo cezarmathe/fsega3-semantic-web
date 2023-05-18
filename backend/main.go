@@ -95,7 +95,7 @@ func scrapeServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blogPosts := make([]types.BlogPost, 0, 10)
+	blogPosts := make([]types.BlogPost, 0, 3)
 	for i := 0; i < cap(blogPosts); i++ {
 		node := nodes[i]
 

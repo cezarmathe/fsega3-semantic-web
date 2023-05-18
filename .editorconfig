@@ -17,7 +17,7 @@ indent_style = tab
 [Makefile]
 indent_style = tab
 
-[*.{json,yaml,yml}]
+[*.{json,yaml,yml,txt}]
 indent_size = 2
 
 [*.{js,jsx,ts,tsx}]
