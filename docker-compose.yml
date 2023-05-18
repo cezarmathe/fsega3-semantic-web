@@ -1,8 +1,5 @@
 version: '3.8'
 
-# # See https://hub.docker.com/r/eclipse/rdf4j-workbench for documentation.
-# https://www.easyrdf.org/docs/api/EasyRdf/Http/Client.html
-
 services:
   json-server:
     image: docker.io/backplane/json-server:latest
@@ -16,11 +13,4 @@ services:
     environment:
       JAVA_OPTS: "-Xms1g -Xmx4g"
     ports:
-      - "8080:8080" # changeme
-    volumes:
-      - rdf4j-data:/var/rdf4j
-      - rdf4j-tomcat-logs:/usr/local/tomcat/logs
-
-volumes:
-  rdf4j-data:
-  rdf4j-tomcat-logs:
+      - "8080:8080"

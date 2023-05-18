@@ -77,11 +77,11 @@ func (r *RDF4J) FindAll(ctx context.Context) ([]types.BlogPost, error) {
 		blogPost.URL = v.Subject.Value
 
 		switch v.Predicate.Value {
-		case "http://example.com/articleauthor":
+		case "http://example.com/articles/author":
 			blogPost.Author = v.Object.Value
-		case "http://example.com/articledate":
+		case "http://example.com/articles/date":
 			blogPost.Date = v.Object.Value
-		case "http://example.com/articletitle":
+		case "http://example.com/articles/title":
 			blogPost.Title = v.Object.Value
 		}
 
@@ -102,14 +102,14 @@ func (r *RDF4J) SaveOne(ctx context.Context, blogPost types.BlogPost) (types.Blo
 	form := url.Values{}
 	form.Set("update", fmt.Sprintf(
 		`
-		prefix articlepredicate: <http://example.com/article>
+		prefix articlePredicate: <http://example.com/articles/>
 
 		insert data {
 			graph <http://example.com/articles> {
 				<%s>
-					articlepredicate:author "%s";
-					articlepredicate:date "%s";
-					articlepredicate:title "%s".
+					articlePredicate:author "%s";
+					articlePredicate:date "%s";
+					articlePredicate:title "%s".
 			}
 		}
 		`,

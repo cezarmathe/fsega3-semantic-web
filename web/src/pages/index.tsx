@@ -133,7 +133,7 @@ export default function Home() {
 
   return (
     <main>
-      <Button onPress={scrapeButtonOnPress}>Scrape Drew DeVault's blog</Button>
+      <Button onPress={scrapeButtonOnPress}>Scrape Drew DeVault&apos;s blog</Button>
 
       {
         blogPostsTableFC('Scraped blog posts', scrapedBlogPosts)

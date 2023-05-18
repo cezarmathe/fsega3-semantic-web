@@ -7,7 +7,7 @@ run-backend:
 .PHONY: run-backend
 
 run-frontend:
-	cd web && yarn dev --port 3000
+	cd web && yarn build && yarn start --port 3000
 .PHONY: run-frontend
 
 local-up:
